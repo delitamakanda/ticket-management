@@ -12,7 +12,7 @@ class TicketListResource(Resource):
     @staticmethod
     def get():
         tickets = Ticket.query.all()
-        return tickets.serialize(), 200
+        return [tickets.serialize() for t in tickets], 200
     
     @staticmethod
     def post():
@@ -24,7 +24,7 @@ class TicketListResource(Resource):
     
 class TicketResource(Resource):
     @staticmethod
-    def get(self, ticket_id):
+    def get(ticket_id):
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
             return {'message': 'Ticket not found'}, 404
