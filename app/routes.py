@@ -7,10 +7,13 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    if not data or not data.get('username') or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing username, email, or password'}), 400
+    if not data or not data.get('username') or not data.get('email') or not data.get('password') or not data.get('role'):
+        return jsonify({'error': 'Missing username, email, or password or role'}), 400
     if User.query.filter_by(username=data['username']).first() or User.query.filter_by(email=data['email']).first():
         return jsonify({'error': 'Username or email already taken'}), 409
+    
+    if data['role'] not in ['consumer', 'engineer', 'admin']:
+        return jsonify({'error': 'Invalid role'}), 400
     
     user = User(username=data['username'], email=data['email'])
     user.set_password(data['password'])
@@ -29,8 +32,8 @@ def login():
     if not user or not user.check_password(data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
     
-    access_token = create_access_token(identity=user.id)
-    refresh_token = create_refresh_token(identity=user.id)
+    access_token = create_access_token(identity={'id':user.id, 'role': user.role})
+    refresh_token = create_refresh_token(identity={'id':user.id, 'role': user.role})
     return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
 
 

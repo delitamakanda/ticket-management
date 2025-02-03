@@ -1,6 +1,7 @@
 from flask_restful import Resource, reqparse
 from .models import db, Ticket
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from .utils import role_required
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -15,8 +16,11 @@ class TicketListResource(Resource):
         return [tickets.serialize() for t in tickets], 200
     
     @staticmethod
+    @jwt_required()
+    @role_required('consumer')
     def post():
         args = ticket_parser.parse_args()
+        identity = get_jwt_identity()
         ticket = Ticket(title=args['title'], description=args['description'], status=args['status'], priority=args['priority'])
         db.session.add(ticket)
         db.session.commit()
@@ -32,6 +36,7 @@ class TicketResource(Resource):
     
     @staticmethod
     @jwt_required()
+    @role_required('engineer')
     def put(ticket_id):
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
@@ -49,6 +54,7 @@ class TicketResource(Resource):
     
     @staticmethod
     @jwt_required()
+    @role_required('engineer')
     def delete(self, ticket_id):
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
