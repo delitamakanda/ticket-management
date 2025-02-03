@@ -1,6 +1,6 @@
 from flask_restful import Resource, reqparse
 from .models import db, Ticket
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -31,8 +31,9 @@ class TicketResource(Resource):
         return ticket.serialize(), 200
     
     @staticmethod
-    @jwt_required
-    def put(self, ticket_id):
+    @jwt_required()
+    def put(ticket_id):
+        user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
             return {'message': 'Ticket not found'}, 404
@@ -47,8 +48,9 @@ class TicketResource(Resource):
         return ticket.serialize(), 200
     
     @staticmethod
-    @jwt_required
+    @jwt_required()
     def delete(self, ticket_id):
+        user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
             return {'message': 'Ticket not found'}, 404
