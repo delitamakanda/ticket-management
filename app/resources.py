@@ -17,7 +17,7 @@ class TicketListResource(Resource):
     
     @staticmethod
     @jwt_required()
-    @role_required('consumer')
+    @role_required(['consumer'])
     def post():
         args = ticket_parser.parse_args()
         identity = get_jwt_identity()
@@ -36,7 +36,7 @@ class TicketResource(Resource):
     
     @staticmethod
     @jwt_required()
-    @role_required('engineer')
+    @role_required(['engineer'])
     def put(ticket_id):
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
@@ -54,7 +54,7 @@ class TicketResource(Resource):
     
     @staticmethod
     @jwt_required()
-    @role_required('engineer')
+    @role_required(['engineer'])
     def delete(self, ticket_id):
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)

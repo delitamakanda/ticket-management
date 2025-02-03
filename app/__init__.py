@@ -17,12 +17,15 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     
-    from .routes import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    from .auth_routes import auth_bp
+    from .admin_routes import admin_bp
     
     from .resources import TicketResource, TicketListResource
     api = Api(app)
     api.add_resource(TicketListResource, '/api/tickets')
     api.add_resource(TicketResource, '/api/tickets/<int:ticket_id>')
+    
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
     return app

@@ -1,10 +1,13 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
+from .utils import role_required
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
+@jwt_required()
+@role_required(['admin'])
 def register():
     data = request.get_json()
     if not data or not data.get('username') or not data.get('email') or not data.get('password') or not data.get('role'):
