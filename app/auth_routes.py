@@ -2,11 +2,13 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
 from .utils import role_required
+from . import limiter
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 @jwt_required()
+@limiter.limit("3 per minute")
 @role_required(['admin'])
 def register():
     data = request.get_json()
@@ -26,6 +28,7 @@ def register():
     return jsonify({'message': 'User registered successfully'}), 201
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):

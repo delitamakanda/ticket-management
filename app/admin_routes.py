@@ -1,12 +1,14 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from .models import db, User
 from .utils import role_required
+from . import limiter
 
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/users', methods=['GET'])
 @jwt_required()
+@limiter.limit("100 per hour")
 @role_required(['admin'])
 def get_users():
     users = User.query.all()

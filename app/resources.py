@@ -2,6 +2,7 @@ from flask_restful import Resource, reqparse
 from .models import db, Ticket
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .utils import role_required
+from . import limiter
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -11,6 +12,7 @@ ticket_parser.add_argument('priority', type=str, choices=['low', 'medium', 'high
 
 class TicketListResource(Resource):
     @staticmethod
+    @limiter.limit("10 per minute")
     def get():
         tickets = Ticket.query.all()
         return [tickets.serialize() for t in tickets], 200
@@ -18,6 +20,7 @@ class TicketListResource(Resource):
     @staticmethod
     @jwt_required()
     @role_required(['consumer'])
+    @limiter.limit("5 per minute")
     def post():
         args = ticket_parser.parse_args()
         identity = get_jwt_identity()
