@@ -17,6 +17,9 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     
+    from .routes import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    
     from .resources import TicketResource, TicketListResource
     api = Api(app)
     api.add_resource(TicketListResource, '/api/tickets')
