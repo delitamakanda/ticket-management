@@ -4,12 +4,13 @@ from .models import db, User, AuthenticationLog
 from .utils import role_required
 from . import limiter
 from .logger import clean_old_logs
+from .rate_limit_utils import rate_limit_per_role
 
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/users', methods=['GET'])
 @jwt_required()
-@limiter.limit("100 per hour")
+@limiter.limit(rate_limit_per_role)
 @role_required(['admin'])
 def get_users():
     identity = get_jwt_identity()
@@ -62,6 +63,7 @@ def get_logs():
 @admin_bp.route('/clean_logs', methods=['POST'])
 @jwt_required()
 @role_required(['admin'])
+@limiter.limit(rate_limit_per_role)
 def clean_logs():
     clean_old_logs(days=30)
     return {'message': 'Old logs cleaned successfully'}, 200

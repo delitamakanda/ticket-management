@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from .utils import role_required
 from . import limiter
 from .mailer import send_email
+from .rate_limit_utils import rate_limit_per_role
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -14,7 +15,7 @@ ticket_parser.add_argument('priority', type=str, choices=['low', 'medium', 'high
 
 class TicketListResource(Resource):
     @staticmethod
-    @limiter.limit("10 per minute")
+    @limiter.limit(rate_limit_per_role)
     def get():
         tickets = Ticket.query.all()
         return [tickets.serialize() for t in tickets], 200
@@ -22,7 +23,7 @@ class TicketListResource(Resource):
     @staticmethod
     @jwt_required()
     @role_required(['consumer'])
-    @limiter.limit("5 per minute")
+    @limiter.limit(rate_limit_per_role())
     def post():
         args = ticket_parser.parse_args()
         identity = get_jwt_identity()
