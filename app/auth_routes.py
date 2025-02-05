@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, url_for
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
 from .utils import role_required
@@ -63,3 +63,39 @@ def refresh():
 def me():
     user_id = get_jwt_identity()
     return jsonify({'message': f'{user_id}'}), 200
+
+
+@auth_bp.route('/password_reset_request', methods=['POST'])
+@limiter.limit("10 per hour")
+def password_reset_request():
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Missing email'}), 400
+    
+    user = User.query.filter_by(email=data['email']).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    token = user.get_reset_token()
+    reset_url = url_for('auth.reset_password', token=token, _external=True)
+    
+    # send email with reset link
+    subject = 'Password Reset Request'
+    body = render_template('password_reset_notification.html', username=user.username, reset_url=reset_url)
+    send_email(subject, user.email, body)
+    
+    return jsonify({'message': 'Password reset email sent'}), 200
+
+@auth_bp.route('/reset_password/<token>', methods=['POST'])
+def password_reset(token):
+    user = User.verify_reset_token(token)
+    if not user:
+        return jsonify({'error': 'Invalid token'}), 401
+    
+    data = request.get_json()
+    if not data or not data.get('password'):
+        return jsonify({'error': 'Missing password'}), 400
+    
+    user.set_password(data['password'])
+    db.session.commit()
+    return jsonify({'message': 'Password reset successfully'}), 200

@@ -1,5 +1,7 @@
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import current_app
+from itsdangerous import URLSafeTimedSerializer
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -13,6 +15,16 @@ class User(db.Model):
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_reset_token(self, expires_sec=3600):
+        serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        return serializer.dumps(self.email, salt=current_app.config['SECRET_KEY'])
+    
+    @staticmethod
+    def verify_reset_token(token, expires_sec=3600):
+        serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        email = serializer.loads(token, salt=current_app.config['SECRET_KEY'], max_age=expires_sec)
+        return User.query.filter_by(email=email).first()
     
     def __repr__(self):
         return f'<User {self.username}>'
