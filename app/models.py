@@ -25,6 +25,10 @@ class User(db.Model):
     def get_otp_code(self):
         totp = pyotp.TOTP(self.otp_secret)
         return totp.now()
+    
+    def get_qrcode_uri(self):
+        totp = pyotp.TOTP(self.otp_secret)
+        return totp.provisioning_uri(self.username, issuer_name='Ticketing System')
 
     @staticmethod
     def verify_reset_token(token, expires_sec=3600):

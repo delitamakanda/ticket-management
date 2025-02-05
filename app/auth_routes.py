@@ -1,10 +1,11 @@
 import pyotp
-from flask import Blueprint, request, jsonify, render_template, url_for
+from flask import Blueprint, request, jsonify, render_template, url_for, send_file
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
 from .utils import role_required
 from . import limiter
 from .mailer import send_email
+from .qr_utils import generate_qrcode
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -26,6 +27,12 @@ def register():
     user.set_password(data['password'])
     db.session.add(user)
     db.session.commit()
+    
+    # Generate QR code
+    qrcode_uri = user.get_qrcode_uri()
+    qrcode_img = generate_qrcode(qrcode_uri)
+    
+    send_file(qrcode_img, mimetype='image/png')
     
     # Send email confirmation
     subject = 'Registration Confirmation'
