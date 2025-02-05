@@ -1,4 +1,4 @@
-import pyotp
+from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template, url_for, send_file
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
@@ -50,14 +50,20 @@ def login():
         return jsonify({'error': 'Missing username or password'}), 400
     
     user = User.query.filter_by(username=data['username']).first()
+    if user and user.is_locked():
+        return jsonify({'error': 'Account is locked'}), 403
+
     if not user or not user.check_password(data['password']):
+        if user:
+            user.failed_attempts += 1
+            if user.failed_attempts >= 3:
+                user.lock()
+                subject = 'Account Locked'
+                body = render_template('account_locked.html', username=user.username)
+                send_email(subject, user.email, body)
+                return jsonify({'error': 'Too many failed login attempts'}), 403
+            db.session.commit()
         return jsonify({'error': 'Invalid username or password'}), 401
-    
-    # generate otp and send via email
-    otp = user.get_otp_code()
-    subject = 'Two-Factor Authentication Code'
-    body = render_template('otp_email.html', otp_code=otp, username=user['username'])
-    send_email(subject, user.email, body)
     
     return jsonify({'message': 'Login successful'}), 200
 
@@ -170,3 +176,35 @@ def verify_fallback_otp():
     access_token = create_access_token(identity={'id': user.id, 'role': user.role})
     refresh_token = create_refresh_token(identity={'id': user.id, 'role': user.role})
     return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
+
+@auth_bp.route('/request_unlock', methods=['POST'])
+@limiter.limit("5 per minute")
+def request_unlock():
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Missing email'}), 400
+    
+    user = User.query.filter_by(email=data['email']).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if not user.is_locked():
+        return jsonify({'error': 'Account is not locked'}), 403
+    unlock_url = url_for('auth.unlock_account', email=user.email, _external=True)
+    subject = 'Account Unlock Request'
+    body = render_template('unlock_account_notification.html', username=user.username, unlock_url=unlock_url)
+    send_email(subject, user.email, body)
+    return jsonify({'message': 'Unlock request sent'}), 200
+
+@auth_bp.route('/unlock_account', methods=['POST'])
+@limiter.limit("5 per minute")
+def unlock_account():
+    email = request.args.get('email')
+    if not email:
+        return jsonify({'error': 'Missing email'}), 400
+    
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    user.unlock()
+    return jsonify({'message': 'Account unlocked successfully'}), 200
+    

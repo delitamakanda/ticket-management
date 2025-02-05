@@ -3,6 +3,7 @@ import string
 
 import pyotp
 from . import db
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app
 from itsdangerous import URLSafeTimedSerializer
@@ -15,6 +16,8 @@ class User(db.Model):
     role = db.Column(db.String(20), default='consumer') # consumer, engineer, admin
     otp_secret = db.Column(db.String(16), default=pyotp.random_base32())
     fallback_otp_secret = db.Column(db.String(6), nullable=True)
+    failed_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -38,6 +41,19 @@ class User(db.Model):
         self.fallback_otp_secret = ''.join(random.choices(string.digits, k=6))
         db.session.commit()
         return self.fallback_otp_secret
+    
+    def is_locked(self):
+        return self.locked_until and self.locked_until > datetime.now()
+    
+    def lock(self, minutes=15):
+        self.locked_until = datetime.now() + timedelta(minutes=minutes)
+        self.failed_attempts = 0
+        db.session.commit()
+    
+    def unlock(self):
+        self.locked_until = None
+        self.failed_attempts = 0
+        db.session.commit()
 
     @staticmethod
     def verify_reset_token(token, expires_sec=3600):
