@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, User, AuthenticationLog
 from .utils import role_required
 from . import limiter
+from .logger import clean_old_logs
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -56,5 +57,13 @@ def delete_user(user_id):
 def get_logs():
     logs = AuthenticationLog.query.order_by(AuthenticationLog.timestamp.desc()).all()
     return [log.serialize() for log in logs], 200
+
+
+@admin_bp.route('/clean_logs', methods=['POST'])
+@jwt_required()
+@role_required(['admin'])
+def clean_logs():
+    clean_old_logs(days=30)
+    return {'message': 'Old logs cleaned successfully'}, 200
 
 

@@ -66,9 +66,9 @@ def login():
                 send_email(subject, user.email, body)
                 return jsonify({'error': 'Too many failed login attempts'}), 403
             db.session.commit()
-            log_auth_event(user, 'LOGIN_ATTEMPT_FAILED')
+            log_auth_event(user, 'LOGIN_FAILURE')
         else:
-            log_auth_event(user, 'LOGIN_FAILURE_UNKNOWN_USER')
+            log_auth_event(None, 'LOGIN_FAILURE_UNKNOWN_USER')
         return jsonify({'error': 'Invalid username or password'}), 401
     
     user.failed_attempts = 0
