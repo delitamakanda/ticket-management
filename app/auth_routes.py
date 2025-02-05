@@ -8,6 +8,7 @@ from .mailer import send_email
 from .qr_utils import generate_qrcode
 from .logger import log_auth_event
 from .rate_limit_utils import rate_limit_per_role
+from .ai_utils import generate_ticket_suggestion
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -209,7 +210,7 @@ def request_unlock():
     return jsonify({'message': 'Unlock request sent'}), 200
 
 @auth_bp.route('/unlock_account', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit(rate_limit_per_role)
 def unlock_account():
     email = request.args.get('email')
     if not email:
@@ -222,4 +223,15 @@ def unlock_account():
     user.unlock()
     log_auth_event(user, 'ACCOUNT_UNLOCKED')
     return jsonify({'message': 'Account unlocked successfully'}), 200
+
+@auth_bp.route('/ai_generate_ticket', methods=['POST'])
+@jwt_required()
+@limiter.limit(rate_limit_per_role)
+def ai_generate_ticket():
+    data = request.get_json()
+    if not data or not data.get('issue_summary'):
+        return jsonify({'error': 'Missing issue summary'}), 400
+    
+    title, priority, status, description = generate_ticket_suggestion(data['issue_summary'])
+    return jsonify({'title': title, 'priority': priority,'status': status, 'description': description}), 200
     

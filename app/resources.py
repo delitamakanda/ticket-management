@@ -6,6 +6,7 @@ from .utils import role_required
 from . import limiter
 from .mailer import send_email
 from .rate_limit_utils import rate_limit_per_role
+from .ai_utils import generate_ticket_suggestion
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -26,6 +27,9 @@ class TicketListResource(Resource):
     @limiter.limit(rate_limit_per_role)
     def post():
         args = ticket_parser.parse_args()
+        
+        if not args['title'] or not args['description']:
+            args['title'], args['description'] = generate_ticket_suggestion(args.get('title', '') + ' ' + args.get('description', ''))
         identity = get_jwt_identity()
         user = User.query.get(identity['id'])
         ticket = Ticket(title=args['title'], description=args['description'], status=args['status'], priority=args['priority'])

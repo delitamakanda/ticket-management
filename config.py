@@ -16,3 +16,4 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SEND = os.environ.get('MAIL_USERNAME') or 'admin@localhost.com'
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
