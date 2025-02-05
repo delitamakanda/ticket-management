@@ -1,8 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
 from .utils import role_required
 from . import limiter
+from .mailer import send_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,6 +25,12 @@ def register():
     user.set_password(data['password'])
     db.session.add(user)
     db.session.commit()
+    
+    # Send email confirmation
+    subject = 'Registration Confirmation'
+    body = render_template('email_confirmation.html', username=data['username'], role=data['role'] )
+    send_email(subject, data['email'], body)
+    
     
     return jsonify({'message': 'User registered successfully'}), 201
 

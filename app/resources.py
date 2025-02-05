@@ -1,8 +1,10 @@
+from flask import render_template
 from flask_restful import Resource, reqparse
-from .models import db, Ticket
+from .models import db, Ticket, User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .utils import role_required
 from . import limiter
+from .mailer import send_email
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -24,9 +26,15 @@ class TicketListResource(Resource):
     def post():
         args = ticket_parser.parse_args()
         identity = get_jwt_identity()
+        user = User.query.get(identity['id'])
         ticket = Ticket(title=args['title'], description=args['description'], status=args['status'], priority=args['priority'])
         db.session.add(ticket)
         db.session.commit()
+        
+        # Send email notification
+        subject = f'New Ticket: {args["title"]}'
+        body = render_template('new_ticket_notification.html', ticket=ticket, username=user['username'])
+        send_email(subject, user.email, body)
         return ticket.serialize(), 201
     
 class TicketResource(Resource):
@@ -51,6 +59,13 @@ class TicketResource(Resource):
         ticket.description = args['description']
         ticket.status = args.get('status', ticket.status)
         ticket.priority = args.get('priority', ticket.priority)
+        
+        user = User.query.get(user_id)
+        
+        if user:
+            subject = f'Ticket Update: {ticket.title}'
+            body = render_template('ticket_update_notification.html', ticket=ticket, username=user['username'])
+            send_email(subject, user.email, body)
         
         db.session.commit()
         return ticket.serialize(), 200

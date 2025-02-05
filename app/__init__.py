@@ -3,10 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
+from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from config import Config
 
+mail = Mail()
 limiter = Limiter(key_func=get_remote_address, default_limits=["100 per hour", "10 per minute"])
 db = SQLAlchemy()
 migrate = Migrate()
@@ -20,6 +22,7 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     limiter.init_app(app)
+    mail.init_app(app)
     
     from .auth_routes import auth_bp
     from .admin_routes import admin_bp
