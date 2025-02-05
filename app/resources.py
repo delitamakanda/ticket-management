@@ -23,7 +23,7 @@ class TicketListResource(Resource):
     @staticmethod
     @jwt_required()
     @role_required(['consumer'])
-    @limiter.limit(rate_limit_per_role())
+    @limiter.limit(rate_limit_per_role)
     def post():
         args = ticket_parser.parse_args()
         identity = get_jwt_identity()
