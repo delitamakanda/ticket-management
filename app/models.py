@@ -93,3 +93,28 @@ class Ticket(db.Model):
             'priority': self.priority,
             'created_at': self.created_at.isoformat()
         }
+    
+class AuthenticationLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    username = db.Column(db.String(64), nullable=True)
+    event = db.Column(db.String(20), nullable=False)
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.now())
+    user = db.relationship('User', backref=db.backref('authentication_logs', lazy=True))
+    
+    def __repr__(self):
+        return f'<AuthenticationLog {self.id}: {self.event} by {self.username}>'
+    
+    def serialize(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'username': self.username,
+            'event': self.event,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'timestamp': self.timestamp.isoformat()
+        }
+    

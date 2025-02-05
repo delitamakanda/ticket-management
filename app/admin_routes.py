@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from .models import db, User
+from .models import db, User, AuthenticationLog
 from .utils import role_required
 from . import limiter
 
@@ -48,5 +48,13 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return {'message': 'User deleted successfully'}, 200
+
+
+@admin_bp.route('/logs', methods=['GET'])
+@jwt_required()
+@role_required(['admin'])
+def get_logs():
+    logs = AuthenticationLog.query.order_by(AuthenticationLog.timestamp.desc()).all()
+    return [log.serialize() for log in logs], 200
 
 

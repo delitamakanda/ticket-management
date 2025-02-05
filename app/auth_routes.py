@@ -6,6 +6,7 @@ from .utils import role_required
 from . import limiter
 from .mailer import send_email
 from .qr_utils import generate_qrcode
+from .logger import log_auth_event
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -51,6 +52,7 @@ def login():
     
     user = User.query.filter_by(username=data['username']).first()
     if user and user.is_locked():
+        log_auth_event(user, 'LOGIN_ATTEMPT_LOCKED')
         return jsonify({'error': 'Account is locked'}), 403
 
     if not user or not user.check_password(data['password']):
@@ -58,13 +60,21 @@ def login():
             user.failed_attempts += 1
             if user.failed_attempts >= 3:
                 user.lock()
+                log_auth_event(user, 'ACCOUNT_LOCKED')
                 subject = 'Account Locked'
                 body = render_template('account_locked.html', username=user.username)
                 send_email(subject, user.email, body)
                 return jsonify({'error': 'Too many failed login attempts'}), 403
             db.session.commit()
+            log_auth_event(user, 'LOGIN_ATTEMPT_FAILED')
+        else:
+            log_auth_event(user, 'LOGIN_FAILURE_UNKNOWN_USER')
         return jsonify({'error': 'Invalid username or password'}), 401
     
+    user.failed_attempts = 0
+    db.session.commit()
+    
+    log_auth_event(user, 'LOGIN_SUCCESS')
     return jsonify({'message': 'Login successful'}), 200
 
 
@@ -186,6 +196,7 @@ def request_unlock():
     
     user = User.query.filter_by(email=data['email']).first()
     if not user:
+        log_auth_event(user, 'UNLOCK_REQUEST_UNKNOWN_USER')
         return jsonify({'error': 'User not found'}), 404
     if not user.is_locked():
         return jsonify({'error': 'Account is not locked'}), 403
@@ -193,6 +204,7 @@ def request_unlock():
     subject = 'Account Unlock Request'
     body = render_template('unlock_account_notification.html', username=user.username, unlock_url=unlock_url)
     send_email(subject, user.email, body)
+    log_auth_event(user, 'UNLOCK_REQUEST_SENT')
     return jsonify({'message': 'Unlock request sent'}), 200
 
 @auth_bp.route('/unlock_account', methods=['POST'])
@@ -204,7 +216,9 @@ def unlock_account():
     
     user = User.query.filter_by(email=email).first()
     if not user:
+        log_auth_event(user, 'UNLOCK_FAILURE_UNKNOWN_USER')
         return jsonify({'error': 'User not found'}), 404
     user.unlock()
+    log_auth_event(user, 'ACCOUNT_UNLOCKED')
     return jsonify({'message': 'Account unlocked successfully'}), 200
     
