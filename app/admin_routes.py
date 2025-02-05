@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, User
 from .utils import role_required
 from . import limiter
@@ -11,8 +11,12 @@ admin_bp = Blueprint('admin', __name__)
 @limiter.limit("100 per hour")
 @role_required(['admin'])
 def get_users():
+    identity = get_jwt_identity()
+    if identity.get('role')!= 'admin':
+        return jsonify({'error': 'Not authorized to access this resource'}), 403
     users = User.query.all()
     return [user.serialize() for user in users], 200
+
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()

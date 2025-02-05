@@ -1,3 +1,4 @@
+import pyotp
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app
@@ -9,6 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, index=True)
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(20), default='consumer') # consumer, engineer, admin
+    otp_secret = db.Column(db.String(16), default=pyotp.random_base32())
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -20,6 +22,10 @@ class User(db.Model):
         serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
         return serializer.dumps(self.email, salt=current_app.config['SECRET_KEY'])
     
+    def get_otp_code(self):
+        totp = pyotp.TOTP(self.otp_secret)
+        return totp.now()
+
     @staticmethod
     def verify_reset_token(token, expires_sec=3600):
         serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])

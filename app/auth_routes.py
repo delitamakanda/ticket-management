@@ -1,3 +1,4 @@
+import pyotp
 from flask import Blueprint, request, jsonify, render_template, url_for
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User
@@ -45,9 +46,13 @@ def login():
     if not user or not user.check_password(data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
     
-    access_token = create_access_token(identity={'id':user.id, 'role': user.role})
-    refresh_token = create_refresh_token(identity={'id':user.id, 'role': user.role})
-    return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
+    # generate otp and send via email
+    otp = user.get_otp_code()
+    subject = 'Two-Factor Authentication Code'
+    body = render_template('otp_email.html', otp_code=otp, username=user['username'])
+    send_email(subject, user.email, body)
+    
+    return jsonify({'message': 'Login successful'}), 200
 
 
 @auth_bp.route('/refresh', methods=['POST'])
@@ -87,6 +92,7 @@ def password_reset_request():
     return jsonify({'message': 'Password reset email sent'}), 200
 
 @auth_bp.route('/reset_password/<token>', methods=['POST'])
+@limiter.limit("5 per minute")
 def password_reset(token):
     user = User.verify_reset_token(token)
     if not user:
@@ -99,3 +105,20 @@ def password_reset(token):
     user.set_password(data['password'])
     db.session.commit()
     return jsonify({'message': 'Password reset successfully'}), 200
+
+
+@auth_bp.route('/verify_otp', methods=['POST'])
+@limiter.limit("5 per minute")
+def verify_otp():
+    data = request.get_json()
+    if not data or not data.get('otp_code'):
+        return jsonify({'error': 'Missing OTP code'}), 400
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.check_otp_code(data['otp_code']):
+        return jsonify({'error': 'Invalid OTP code'}), 401
+    
+    access_token = create_access_token(identity={'id': user.id, 'role': user.role})
+    refresh_token = create_refresh_token(identity={'id': user.id, 'role': user.role})
+    return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
