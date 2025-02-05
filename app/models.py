@@ -1,3 +1,6 @@
+import random
+import string
+
 import pyotp
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,6 +14,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(20), default='consumer') # consumer, engineer, admin
     otp_secret = db.Column(db.String(16), default=pyotp.random_base32())
+    fallback_otp_secret = db.Column(db.String(6), nullable=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -29,6 +33,11 @@ class User(db.Model):
     def get_qrcode_uri(self):
         totp = pyotp.TOTP(self.otp_secret)
         return totp.provisioning_uri(self.username, issuer_name='Ticketing System')
+    
+    def generate_fallback_otp(self):
+        self.fallback_otp_secret = ''.join(random.choices(string.digits, k=6))
+        db.session.commit()
+        return self.fallback_otp_secret
 
     @staticmethod
     def verify_reset_token(token, expires_sec=3600):

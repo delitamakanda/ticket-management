@@ -129,3 +129,44 @@ def verify_otp():
     access_token = create_access_token(identity={'id': user.id, 'role': user.role})
     refresh_token = create_refresh_token(identity={'id': user.id, 'role': user.role})
     return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
+
+
+@auth_bp.route('/request_fallback_otp', methods=['POST'])
+@limiter.limit("5 per minute")
+def request_fallback_otp():
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Missing email'}), 400
+    
+    user = User.query.filter_by(email=data['email']).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    otp_code = user.get_fallback_otp_code()
+    subject = 'Two-Factor Authentication Code'
+    body = render_template('otp_email.html', otp_code=otp_code, username=user.username)
+    send_email(subject, user.email, body)
+    
+    return jsonify({'message': 'Fallback OTP code sent'}), 200
+
+
+@auth_bp.route('/verify_fallback_otp', methods=['POST'])
+@limiter.limit("5 per minute")
+def verify_fallback_otp():
+    data = request.get_json()
+    if not data or not data.get('otp_code') or not data.get('email'):
+        return jsonify({'error': 'Missing OTP code or email'}), 400
+    
+    user = User.query.filter_by(email=data['email']).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    if user.fallback_otp_code != data['otp_code']:
+        return jsonify({'error': 'Invalid fallback OTP code'}), 401
+    
+    user.fallback_otp_code = None
+    db.session.commit()
+    
+    access_token = create_access_token(identity={'id': user.id, 'role': user.role})
+    refresh_token = create_refresh_token(identity={'id': user.id, 'role': user.role})
+    return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
