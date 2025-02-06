@@ -15,7 +15,7 @@ def generate_ticket_suggestion(user_input):
     """
     
     response = openai.Completion.create(
-        engine="gpt-4",
+        engine="gpt-4o-mini",
         prompt=[{"role": "user", "content": prompt}],
         max_tokens=100,
         temperature=0.7,
