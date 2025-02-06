@@ -22,6 +22,19 @@ auth_bp = Blueprint('auth', __name__)
 @jwt_required()
 @cross_origin()
 def subscribe():
+    """
+    Subscribe to push notifications
+    ---
+    parameters:
+    - in: body
+    schema:
+    type: object
+    properties:
+    endpoint:
+      type: string
+      description: Push endpoint for the client
+      example: "https://example.com/push-endpoint"
+    """
     data = request.get_json()
     user_id = get_jwt_identity()["id"]
     
@@ -86,6 +99,11 @@ def ticket_updated_event(ticket_data):
 @limiter.limit(rate_limit_per_role)
 @role_required(['admin'])
 def register():
+    """
+    Register a new user
+    ---
+
+    """
     data = request.get_json()
     if not data or not data.get('username') or not data.get('email') or not data.get('password') or not data.get(
             'role'):
@@ -118,6 +136,11 @@ def register():
 @auth_bp.route('/login', methods=['POST'])
 @limiter.limit(rate_limit_per_role)
 def login():
+    """
+    Authenticate user and generate access and refresh tokens
+    ---
+
+    """
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Missing username or password'}), 400
@@ -153,6 +176,11 @@ def login():
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
+    """"
+    Refresh access and refresh tokens
+    ---
+    
+    """
     current_user_id = get_jwt_identity()
     new_access_token = create_access_token(identity=current_user_id)
     return jsonify({'access_token': new_access_token}), 200
@@ -161,6 +189,10 @@ def refresh():
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def me():
+    """
+    Get user information
+    ---
+    """
     user_id = get_jwt_identity()
     return jsonify({'message': f'{user_id}'}), 200
 
@@ -168,6 +200,23 @@ def me():
 @auth_bp.route('/password_reset_request', methods=['POST'])
 @limiter.limit("10 per hour")
 def password_reset_request():
+    """
+    Send password reset email to the provided email address
+    ---
+    parameters:
+        - in: body
+            schema:
+            type: object
+            properties:
+            email:
+              type: string
+              description: Email address for password reset
+              example: john.doe@example.com
+              required: true
+              minLength: 5
+              maxLength: 50
+              pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    """
     data = request.get_json()
     if not data or not data.get('email'):
         return jsonify({'error': 'Missing email'}), 400
@@ -190,6 +239,11 @@ def password_reset_request():
 @auth_bp.route('/reset_password/<token>', methods=['POST'])
 @limiter.limit("5 per minute")
 def password_reset(token):
+    """
+    Verify and reset password using the provided token
+    ---
+    
+    """
     user = User.verify_reset_token(token)
     if not user:
         return jsonify({'error': 'Invalid token'}), 401

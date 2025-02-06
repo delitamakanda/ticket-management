@@ -1,7 +1,5 @@
-import threading
-
 from flask import Flask
-from flask_cors import cross_origin
+from flasgger import Swagger, APISpec
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -12,12 +10,15 @@ from flask_socketio import SocketIO
 from flask_limiter.util import get_remote_address
 from config import Config
 
+spec = APISpec()
+
 mail = Mail()
 limiter = Limiter(key_func=get_remote_address, default_limits=["100 per hour", "10 per minute"])
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 socketio = SocketIO(allow_origins=['*'], methods=['GET', 'POST', 'PUT', 'DELETE'])
+swagger = Swagger()
 
 def create_app():
     app = Flask(__name__)
@@ -29,6 +30,7 @@ def create_app():
     limiter.init_app(app)
     mail.init_app(app)
     socketio.init_app(app)
+    swagger.init_app(app)
     
     from .routes.auth_routes import auth_bp
     from .routes.admin_routes import admin_bp

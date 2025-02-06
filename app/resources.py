@@ -20,6 +20,16 @@ class TicketListResource(Resource):
     @jwt_required()
     @limiter.limit(rate_limit_per_role)
     def get():
+        """
+        Get all tickets
+        ---
+        responses:
+            200:
+                description: List of all tickets
+                schema:
+                    type: array
+                    
+        """
         tickets = Ticket.query.all()
         return [tickets.serialize() for t in tickets], 200
     
@@ -28,6 +38,32 @@ class TicketListResource(Resource):
     @role_required(['consumer'])
     @limiter.limit(rate_limit_per_role)
     def post():
+        """
+        Create a new ticket
+        ---
+        parameters:
+            - in: body
+              name: ticket
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  status:
+                    type: string
+                    default: open
+                    enum: [open, closed, in_progress]
+                  priority:
+                    type: string
+                    default: medium
+                    enum: [low, medium, high]
+                required: [title, description]
+        responses:
+            201:
+                description: Created ticket
+        """
         args = ticket_parser.parse_args()
         
         if not args['title'] or not args['description']:
@@ -47,6 +83,20 @@ class TicketListResource(Resource):
 class TicketResource(Resource):
     @staticmethod
     def get(ticket_id):
+        """
+        Get a single ticket
+        ---
+        parameters:
+            - in: path
+              name: ticket_id
+              type: integer
+        responses:
+            200:
+                description: Single ticket
+                schema:
+                    type: object
+                    
+        """
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
             return {'message': 'Ticket not found'}, 404
@@ -56,6 +106,15 @@ class TicketResource(Resource):
     @jwt_required()
     @role_required(['engineer'])
     def put(ticket_id):
+        """
+        Update a ticket
+        ---
+        responses:
+            200:
+                description: Updated ticket
+                schema:
+                    type: object
+        """
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
@@ -83,6 +142,17 @@ class TicketResource(Resource):
     @jwt_required()
     @role_required(['engineer'])
     def delete(self, ticket_id):
+        """
+        Delete a ticket by ID
+        ---
+        parameters:
+            - in: path
+              name: ticket_id
+              type: integer
+        responses:
+            200:
+                description: Ticket deleted successfully
+        """
         user_id = get_jwt_identity()
         ticket = Ticket.query.get(ticket_id)
         if not ticket:
