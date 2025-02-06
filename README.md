@@ -23,3 +23,9 @@ flask db upgrade
 ```
 python3 run.py
 ```
+
+
+## asynchrone task
+```
+python3 -m tasks
+```
