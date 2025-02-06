@@ -15,8 +15,8 @@ from flask_cors import cross_origin
 from pywebpush import webpush, WebPushException
 from .. import socketio
 
-
 auth_bp = Blueprint('auth', __name__)
+
 
 @auth_bp.route('/subscribe', methods=['POST'])
 @jwt_required()
@@ -44,10 +44,11 @@ def subscribe():
     
     return jsonify({'message': 'Subscription successful'}), 200
 
+
 def send_notification(user_id, title, message):
     push_notification = PushNotification.query.filter_by(user_id=user_id).first()
     
-    payload = { "title": title, "body": message }
+    payload = {"title": title, "body": message}
     
     for push in push_notification:
         try:
@@ -68,7 +69,7 @@ def send_notification(user_id, title, message):
             )
         except WebPushException as e:
             print(f"Failed to send notification to {push.endpoint}: {e}")
-            
+
 
 @socketio.on('ticket_updated')
 def ticket_updated_event(ticket_data):
@@ -76,9 +77,8 @@ def ticket_updated_event(ticket_data):
     ticket = Ticket.query.get(ticket_id)
     
     if ticket:
-        send_notification(ticket.user_id, f'Ticket Updated: {ticket.title}', f'Your ticket {ticket.title} has been updated to {ticket.status}.' )
-    
-    
+        send_notification(ticket.user_id, f'Ticket Updated: {ticket.title}',
+                          f'Your ticket {ticket.title} has been updated to {ticket.status}.')
 
 
 @auth_bp.route('/register', methods=['POST'])
@@ -87,7 +87,8 @@ def ticket_updated_event(ticket_data):
 @role_required(['admin'])
 def register():
     data = request.get_json()
-    if not data or not data.get('username') or not data.get('email') or not data.get('password') or not data.get('role'):
+    if not data or not data.get('username') or not data.get('email') or not data.get('password') or not data.get(
+            'role'):
         return jsonify({'error': 'Missing username, email, or password or role'}), 400
     if User.query.filter_by(username=data['username']).first() or User.query.filter_by(email=data['email']).first():
         return jsonify({'error': 'Username or email already taken'}), 409
@@ -108,11 +109,11 @@ def register():
     
     # Send email confirmation
     subject = 'Registration Confirmation'
-    body = render_template('email_confirmation.html', username=data['username'], role=data['role'] )
+    body = render_template('email_confirmation.html', username=data['username'], role=data['role'])
     send_email(subject, data['email'], body)
     
-    
     return jsonify({'message': 'User registered successfully'}), 201
+
 
 @auth_bp.route('/login', methods=['POST'])
 @limiter.limit(rate_limit_per_role)
@@ -125,7 +126,7 @@ def login():
     if user and user.is_locked():
         log_auth_event(user, 'LOGIN_ATTEMPT_LOCKED')
         return jsonify({'error': 'Account is locked'}), 403
-
+    
     if not user or not user.check_password(data['password']):
         if user:
             user.failed_attempts += 1
@@ -184,6 +185,7 @@ def password_reset_request():
     send_email(subject, user.email, body)
     
     return jsonify({'message': 'Password reset email sent'}), 200
+
 
 @auth_bp.route('/reset_password/<token>', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -258,6 +260,7 @@ def verify_fallback_otp():
     refresh_token = create_refresh_token(identity={'id': user.id, 'role': user.role})
     return jsonify({'access_token': access_token, 'refresh_token': refresh_token}), 200
 
+
 @auth_bp.route('/request_unlock', methods=['POST'])
 @limiter.limit("5 per minute")
 def request_unlock():
@@ -278,6 +281,7 @@ def request_unlock():
     log_auth_event(user, 'UNLOCK_REQUEST_SENT')
     return jsonify({'message': 'Unlock request sent'}), 200
 
+
 @auth_bp.route('/unlock_account', methods=['POST'])
 @limiter.limit(rate_limit_per_role)
 def unlock_account():
@@ -293,6 +297,7 @@ def unlock_account():
     log_auth_event(user, 'ACCOUNT_UNLOCKED')
     return jsonify({'message': 'Account unlocked successfully'}), 200
 
+
 @auth_bp.route('/ai_generate_ticket', methods=['POST'])
 @jwt_required()
 @limiter.limit(rate_limit_per_role)
@@ -302,9 +307,9 @@ def ai_generate_ticket():
         return jsonify({'error': 'Missing issue summary'}), 400
     
     title, priority, status, description = generate_ticket_suggestion(data['issue_summary'])
-    return jsonify({'title': title, 'priority': priority,'status': status, 'description': description}), 200
-    
-    
+    return jsonify({'title': title, 'priority': priority, 'status': status, 'description': description}), 200
+
+
 @auth_bp.route('/chatbot', methods=['POST'])
 @jwt_required()
 @limiter.limit(rate_limit_per_role)
@@ -315,4 +320,3 @@ def chatbot():
     
     response = generate_chatbot_response(data['message'])
     return jsonify({'response': response}), 200
-    
