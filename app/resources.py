@@ -2,11 +2,11 @@ from flask import render_template
 from flask_restful import Resource, reqparse
 from .models import db, Ticket, User
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from .utils import role_required
+from .utils.utils import role_required
 from . import limiter
 from .mailer import send_email
-from .rate_limit_utils import rate_limit_per_role
-from .ai_utils import generate_ticket_suggestion
+from .utils.rate_limit_utils import rate_limit_per_role
+from .utils.ai_utils import generate_ticket_suggestion
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')

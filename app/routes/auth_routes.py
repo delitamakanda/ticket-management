@@ -1,14 +1,14 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template, url_for, send_file
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from .models import db, User
-from .utils import role_required
-from . import limiter
-from .mailer import send_email
-from .qr_utils import generate_qrcode
-from .logger import log_auth_event
-from .rate_limit_utils import rate_limit_per_role
-from .ai_utils import generate_ticket_suggestion
+from ..models import db, User
+from .. import limiter
+from ..mailer import send_email
+from ..utils.qr_utils import generate_qrcode
+from ..logger import log_auth_event
+from ..utils.rate_limit_utils import rate_limit_per_role
+from ..utils.ai_utils import generate_ticket_suggestion
+from ..utils.utils import role_required
 
 auth_bp = Blueprint('auth', __name__)
 

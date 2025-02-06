@@ -1,5 +1,4 @@
 from flask_jwt_extended import get_jwt_identity
-from . import limiter
 
 def rate_limit_per_role():
     identity = get_jwt_identity()

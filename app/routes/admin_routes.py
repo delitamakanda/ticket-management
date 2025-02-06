@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from .models import db, User, AuthenticationLog
-from .utils import role_required
-from . import limiter
-from .logger import clean_old_logs
-from .rate_limit_utils import rate_limit_per_role
+from ..models import db, User, AuthenticationLog
+from ..utils.utils import role_required
+from .. import limiter
+from ..logger import clean_old_logs
+from ..utils.rate_limit_utils import rate_limit_per_role
 
 admin_bp = Blueprint('admin', __name__)
 

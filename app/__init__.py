@@ -26,8 +26,8 @@ def create_app():
     limiter.init_app(app)
     mail.init_app(app)
     
-    from .auth_routes import auth_bp
-    from .admin_routes import admin_bp
+    from .routes.auth_routes import auth_bp
+    from .routes.admin_routes import admin_bp
     
     from .resources import TicketResource, TicketListResource
     api = Api(app)
