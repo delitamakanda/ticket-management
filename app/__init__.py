@@ -1,12 +1,14 @@
 import threading
 
 from flask import Flask
+from flask_cors import cross_origin
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
 from flask_mail import Mail
 from flask_limiter import Limiter
+from flask_socketio import SocketIO
 from flask_limiter.util import get_remote_address
 from config import Config
 
@@ -15,6 +17,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100 per hour", "
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
+socketio = SocketIO(allow_origins=['*'], methods=['GET', 'POST', 'PUT', 'DELETE'])
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +28,7 @@ def create_app():
     jwt.init_app(app)
     limiter.init_app(app)
     mail.init_app(app)
+    socketio.init_app(app)
     
     from .routes.auth_routes import auth_bp
     from .routes.admin_routes import admin_bp

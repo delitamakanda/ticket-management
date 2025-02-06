@@ -7,6 +7,7 @@ from . import limiter
 from .mailer import send_email
 from .utils.rate_limit_utils import rate_limit_per_role
 from .utils.ai_utils import generate_ticket_suggestion
+from . import socketio
 
 ticket_parser = reqparse.RequestParser()
 ticket_parser.add_argument('title', type=str, required=True, help='Title is required')
@@ -74,6 +75,8 @@ class TicketResource(Resource):
             send_email(subject, user.email, body)
         
         db.session.commit()
+        # emit event to update ticket list
+        socketio.emit('ticket_updated', ticket.serialize(), broadcoast=True)
         return ticket.serialize(), 200
     
     @staticmethod

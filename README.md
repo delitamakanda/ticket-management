@@ -29,3 +29,8 @@ python3 run.py
 ```
 python3 -m tasks
 ```
+
+## generate vapid keys
+```
+python -m generate_keys
+```

@@ -17,3 +17,7 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SEND = os.environ.get('MAIL_USERNAME') or 'admin@localhost.com'
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
+    VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY')
+    VAPID_CLAIM_EMAIL = os.environ.get('VAPID_CLAIM_EMAIL')
+    

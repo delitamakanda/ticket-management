@@ -1,7 +1,8 @@
-from datetime import datetime
-from flask import Blueprint, request, jsonify, render_template, url_for, send_file
+import json
+
+from flask import Blueprint, request, jsonify, render_template, url_for, send_file, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from ..models import db, User
+from ..models import db, User, PushNotification, Ticket
 from .. import limiter
 from ..mailer import send_email
 from ..utils.qr_utils import generate_qrcode
@@ -10,8 +11,75 @@ from ..utils.rate_limit_utils import rate_limit_per_role
 from ..utils.ai_utils import generate_ticket_suggestion
 from ..utils.utils import role_required
 from ..utils.chatbot import generate_chatbot_response
+from flask_cors import cross_origin
+from pywebpush import webpush, WebPushException
+from .. import socketio
+
 
 auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/subscribe', methods=['POST'])
+@jwt_required()
+@cross_origin()
+def subscribe():
+    data = request.get_json()
+    user_id = get_jwt_identity()["id"]
+    
+    if not data or not data.get('endpoint') or not data.get('keys'):
+        return jsonify({'error': 'Missing endpoint or keys'}), 400
+    
+    push_notification = PushNotification.query.filter_by(endpoint=data['endpoint']).first()
+    if not push_notification:
+        push_notification = PushNotification(
+            user_id=user_id,
+            endpoint=data['endpoint'],
+            p256h=data['keys']['p256dh'],
+            auth=data['keys']['auth']
+        )
+        db.session.add(push_notification)
+    else:
+        push_notification.p256h = data['keys']['p256dh']
+        push_notification.auth = data['keys']['auth']
+    db.session.commit()
+    
+    return jsonify({'message': 'Subscription successful'}), 200
+
+def send_notification(user_id, title, message):
+    push_notification = PushNotification.query.filter_by(user_id=user_id).first()
+    
+    payload = { "title": title, "body": message }
+    
+    for push in push_notification:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": push.endpoint,
+                    "keys": {
+                        "p256dh": push.p256h,
+                        "auth": push.auth
+                    }
+                },
+                data=json.dumps(payload),
+                vapid_private_key=current_app.config['VAPID_PRIVATE_KEY'],
+                vapid_claims={
+                    "sub": current_app.config['VAPID_CLAIM_EMAIL']
+                },
+                ttl=10800  # 3 hours
+            )
+        except WebPushException as e:
+            print(f"Failed to send notification to {push.endpoint}: {e}")
+            
+
+@socketio.on('ticket_updated')
+def ticket_updated_event(ticket_data):
+    ticket_id = ticket_data.get('ticket_id')
+    ticket = Ticket.query.get(ticket_id)
+    
+    if ticket:
+        send_notification(ticket.user_id, f'Ticket Updated: {ticket.title}', f'Your ticket {ticket.title} has been updated to {ticket.status}.' )
+    
+    
+
 
 @auth_bp.route('/register', methods=['POST'])
 @jwt_required()
