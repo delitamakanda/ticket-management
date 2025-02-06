@@ -16,6 +16,7 @@ ticket_parser.add_argument('priority', type=str, choices=['low', 'medium', 'high
 
 class TicketListResource(Resource):
     @staticmethod
+    @jwt_required()
     @limiter.limit(rate_limit_per_role)
     def get():
         tickets = Ticket.query.all()

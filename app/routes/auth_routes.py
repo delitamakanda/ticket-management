@@ -9,6 +9,7 @@ from ..logger import log_auth_event
 from ..utils.rate_limit_utils import rate_limit_per_role
 from ..utils.ai_utils import generate_ticket_suggestion
 from ..utils.utils import role_required
+from ..utils.chatbot import generate_chatbot_response
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -234,4 +235,16 @@ def ai_generate_ticket():
     
     title, priority, status, description = generate_ticket_suggestion(data['issue_summary'])
     return jsonify({'title': title, 'priority': priority,'status': status, 'description': description}), 200
+    
+    
+@auth_bp.route('/chatbot', methods=['POST'])
+@jwt_required()
+@limiter.limit(rate_limit_per_role)
+def chatbot():
+    data = request.get_json()
+    if not data or not data.get('message'):
+        return jsonify({'error': 'Missing message'}), 400
+    
+    response = generate_chatbot_response(data['message'])
+    return jsonify({'response': response}), 200
     
