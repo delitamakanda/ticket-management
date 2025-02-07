@@ -13,6 +13,13 @@ admin_bp = Blueprint('admin', __name__)
 @limiter.limit(rate_limit_per_role)
 @role_required(['admin'])
 def get_users():
+    """
+    Get all users
+    ---
+    responses:
+        200:
+            description: List of all users
+    """
     identity = get_jwt_identity()
     if identity.get('role')!= 'admin':
         return jsonify({'error': 'Not authorized to access this resource'}), 403
@@ -24,6 +31,13 @@ def get_users():
 @jwt_required()
 @role_required(['admin'])
 def update_user(user_id):
+    """
+    Update a user's role
+    ---
+    responses:
+        200:
+            description: Updated user
+    """
     user = User.query.get(user_id)
     if not user:
         return {'message': 'User not found'}, 404
@@ -43,6 +57,13 @@ def update_user(user_id):
 @jwt_required()
 @role_required(['admin'])
 def delete_user(user_id):
+    """
+    Delete a user by ID
+    ---
+    responses:
+        200:
+            description: User deleted successfully
+    """
     user = User.query.get(user_id)
     if not user:
         return {'message': 'User not found'}, 404
@@ -56,6 +77,13 @@ def delete_user(user_id):
 @jwt_required()
 @role_required(['admin'])
 def get_logs():
+    """
+    Get all authentication logs
+    ---
+    responses:
+        200:
+            description: List of all authentication logs in descending order of timestamp
+    """
     logs = AuthenticationLog.query.order_by(AuthenticationLog.timestamp.desc()).all()
     return [log.serialize() for log in logs], 200
 
@@ -65,6 +93,13 @@ def get_logs():
 @role_required(['admin'])
 @limiter.limit(rate_limit_per_role)
 def clean_logs():
+    """
+    Clean authentication logs older than 30 days
+    ---
+    responses:
+        200:
+            description: Old logs cleaned successfully
+    """
     clean_old_logs(days=30)
     return {'message': 'Old logs cleaned successfully'}, 200
 

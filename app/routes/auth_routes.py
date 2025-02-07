@@ -25,15 +25,9 @@ def subscribe():
     """
     Subscribe to push notifications
     ---
-    parameters:
-    - in: body
-    schema:
-    type: object
-    properties:
-    endpoint:
-      type: string
-      description: Push endpoint for the client
-      example: "https://example.com/push-endpoint"
+    responses:
+        200:
+            description: Subscription successful
     """
     data = request.get_json()
     user_id = get_jwt_identity()["id"]
@@ -102,6 +96,9 @@ def register():
     """
     Register a new user
     ---
+    responses:
+        201:
+            description: User registered successfully
 
     """
     data = request.get_json()
@@ -139,6 +136,9 @@ def login():
     """
     Authenticate user and generate access and refresh tokens
     ---
+    responses:
+        200:
+            description: Access and refresh tokens generated successfully
 
     """
     data = request.get_json()
@@ -176,9 +176,12 @@ def login():
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    """"
+    """
     Refresh access and refresh tokens
     ---
+    responses:
+        200:
+            description: Access and refresh tokens generated successfully
     
     """
     current_user_id = get_jwt_identity()
@@ -192,6 +195,9 @@ def me():
     """
     Get user information
     ---
+    responses:
+        200:
+            description: User information retrieved successfully
     """
     user_id = get_jwt_identity()
     return jsonify({'message': f'{user_id}'}), 200
@@ -203,19 +209,9 @@ def password_reset_request():
     """
     Send password reset email to the provided email address
     ---
-    parameters:
-        - in: body
-            schema:
-            type: object
-            properties:
-            email:
-              type: string
-              description: Email address for password reset
-              example: john.doe@example.com
-              required: true
-              minLength: 5
-              maxLength: 50
-              pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    responses:
+        200:
+            description: Password reset email sent successfully
     """
     data = request.get_json()
     if not data or not data.get('email'):
@@ -242,6 +238,9 @@ def password_reset(token):
     """
     Verify and reset password using the provided token
     ---
+    responses:
+        200:
+            description: Password reset successfully
     
     """
     user = User.verify_reset_token(token)
@@ -260,6 +259,13 @@ def password_reset(token):
 @auth_bp.route('/verify_otp', methods=['POST'])
 @limiter.limit("5 per minute")
 def verify_otp():
+    """
+    Verify OTP code and generate access and refresh tokens
+    ---
+    responses:
+        200:
+            description: Access and refresh tokens generated successfully
+    """
     data = request.get_json()
     if not data or not data.get('otp_code'):
         return jsonify({'error': 'Missing OTP code'}), 400
@@ -277,6 +283,14 @@ def verify_otp():
 @auth_bp.route('/request_fallback_otp', methods=['POST'])
 @limiter.limit("5 per minute")
 def request_fallback_otp():
+    """
+    Send fallback OTP code to the provided email address
+    ---
+    responses:
+        200:
+            description: Fallback OTP code sent successfully
+            
+    """
     data = request.get_json()
     if not data or not data.get('email'):
         return jsonify({'error': 'Missing email'}), 400
@@ -296,6 +310,13 @@ def request_fallback_otp():
 @auth_bp.route('/verify_fallback_otp', methods=['POST'])
 @limiter.limit("5 per minute")
 def verify_fallback_otp():
+    """
+    Verify fallback OTP code and generate access and refresh tokens
+    ---
+    responses:
+        200:
+            description: Access and refresh tokens generated successfully
+    """
     data = request.get_json()
     if not data or not data.get('otp_code') or not data.get('email'):
         return jsonify({'error': 'Missing OTP code or email'}), 400
@@ -318,6 +339,17 @@ def verify_fallback_otp():
 @auth_bp.route('/request_unlock', methods=['POST'])
 @limiter.limit("5 per minute")
 def request_unlock():
+    """
+    Send unlock request email to the provided email address
+    ---
+    responses:
+        200:
+            description: Unlock request sent successfully
+    
+        403:
+            description: Account is not locked
+    
+    """
     data = request.get_json()
     if not data or not data.get('email'):
         return jsonify({'error': 'Missing email'}), 400
@@ -339,6 +371,15 @@ def request_unlock():
 @auth_bp.route('/unlock_account', methods=['POST'])
 @limiter.limit(rate_limit_per_role)
 def unlock_account():
+    """
+    Verify and unlock the account using the provided email address
+    ---
+    responses:
+        200:
+            description: Account unlocked successfully
+        400:
+            description: Invalid unlock code or email
+    """
     email = request.args.get('email')
     if not email:
         return jsonify({'error': 'Missing email'}), 400
@@ -356,6 +397,13 @@ def unlock_account():
 @jwt_required()
 @limiter.limit(rate_limit_per_role)
 def ai_generate_ticket():
+    """
+    Generate a ticket using AI-powered suggestion
+    ---
+    responses:
+        200:
+            description: Ticket suggestion generated successfully
+    """
     data = request.get_json()
     if not data or not data.get('issue_summary'):
         return jsonify({'error': 'Missing issue summary'}), 400
@@ -368,6 +416,13 @@ def ai_generate_ticket():
 @jwt_required()
 @limiter.limit(rate_limit_per_role)
 def chatbot():
+    """
+    Generate a response from a chatbot using the provided message
+    ---
+    responses:
+        200:
+            description: Chatbot response generated successfully
+    """
     data = request.get_json()
     if not data or not data.get('message'):
         return jsonify({'error': 'Missing message'}), 400
